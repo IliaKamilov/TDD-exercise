@@ -139,6 +139,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Cache Dependencies
+        id: npm-cache
         uses: actions/cache@v4
         with:
           path: |
@@ -190,6 +191,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Cache Dependencies
+        id: npm-cache
         uses: actions/cache@v4
         with:
           path: |
