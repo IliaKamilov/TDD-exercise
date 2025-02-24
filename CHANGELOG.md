@@ -2,7 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-
 ## [0.1.3](https://github.com/IliaKamilov/TDD-exercise/compare/v0.1.2...v0.1.3) (2025-02-24)
 
 ### Changelog
