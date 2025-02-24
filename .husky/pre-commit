@@ -1,5 +1,61 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+echo "🔎 Running pre-commit checks..."
 
-npm test
-npx lint-staged
+# Run Prettier Check
+npx prettier --check .
+if [ $? -ne 0 ]; then
+    echo "⚠️ Prettier check errors found."
+    echo "⚒️ Running Prettier Fix..."
+    npx prettier --write .
+fi
+
+# Run TypeScript type-check
+echo "⚙️ Running Typescript type-check..."
+npx tsc --noEmit 
+if [ $? -ne 0 ]; then
+    echo "❌ Type errors detected. Fix them before committing."
+    exit 1
+fi
+
+# Run ESLint
+echo "🔍 Running ESLint..."
+npx next lint 
+if [ $? -ne 0 ]; then
+     echo "❌ Lint errors detected. Fix them before committing."
+  exit 1
+fi
+
+# Run Jest tests
+echo "🧪 Running Jest tests..."
+npx jest --passWithNoTests
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed. Fix them before committing."
+  exit 1
+fi
+
+# Run Build
+echo "🏗️ Running Build..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo "❌ Build failed. Fix errors before committing."
+  exit 1
+fi
+
+# Check for security issues
+echo "🔒 Running npm audit..."
+npm audit --audit-level=moderate
+if [ $? -ne 0 ]; then
+  echo "⚠️ Security vulnerabilities detected. Please review."
+  exit 1
+fi
+
+echo "📦 Checking for outdated dependencies..."
+npm outdated
+OUTDATED_EXIT_CODE=$?
+
+if [ $OUTDATED_EXIT_CODE -eq 0 ]; then
+  echo "✅ No outdated dependencies found."
+else
+  echo "⚠️ Some dependencies are outdated. Consider updating after this commit."
+fi
+
+echo "✅ All checks passed! Proceeding with commit..."
