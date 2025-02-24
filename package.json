@@ -1,7 +1,6 @@
 {
   "name": "tdd-exercise",
   "version": "0.1.5",
-  "main": "index.js",
   "scripts": {
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
@@ -15,7 +14,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "prepare": "husky && husky install"
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -24,7 +23,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/IliaKamilov/TDD-exercise/issues"
   },
