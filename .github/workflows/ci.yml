@@ -1,0 +1,146 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop, preview]
+  pull_request:
+    branches: [main, develop, preview]
+  schedule:
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release type (major|minor|patch)"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      environment:
+        description: "Target environment"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - staging
+          - production
+
+env:
+  NODE_VERSION: "20.x"
+  HUSKY: "0"
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Code Formatting Check
+        run: npm run format:check
+
+      - name: Type Check
+        run: npm run type-check || exit 1
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Build
+        run: npm run build
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Snyk Security Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run npm audit
+        run: npm audit
+
+      - name: Check for outdated
+        run: npm outdated || true
+
+  version:
+    needs: [quality, security]
+    if: |
+      github.ref == 'refs/heads/main' && 
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Generate Release Notes
+        run: |
+          npx ts-node scripts/generateReleaseNotes.ts > RELEASE_NOTES.md
+
+      - name: Create Release
+        id: release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION=$(npm run release -- ${{ github.event.inputs.version }} \
+            --ci \
+            --github.release \
+            --no-git.requireCleanWorkingDir \
+            --releaseNotes="$(cat RELEASE_NOTES.md)" \
+            | grep "name" | cut -d "v" -f2)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto Version Bump
+        id: auto-release
+        if: github.event_name == 'push'
+        run: |
+          VERSION=$(npm run release -- patch \
+            --ci \
+            --github.release \
+            --no-git.requireCleanWorkingDir \
+            --releaseNotes="$(cat RELEASE_NOTES.md)" \
+            | grep "name" | cut -d "v" -f2)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

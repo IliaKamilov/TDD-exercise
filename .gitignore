@@ -1,1 +1,4 @@
 node_modules/
+.release-it.json
+.env
+COMMITS.md
