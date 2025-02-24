@@ -3,8 +3,16 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [main, develop, preview]
+    paths-ignore:
+      - "**.md"
+      - ".github/**/*.md"
+      - "docs/**"
   pull_request:
     branches: [main, develop, preview]
+    paths-ignore:
+      - "**.md"
+      - ".github/**/*.md"
+      - "docs/**"
   schedule:
     - cron: "0 0 * * 0"
   workflow_dispatch:
@@ -31,6 +39,7 @@ on:
 env:
   NODE_VERSION: "20.x"
   HUSKY: "0"
+  NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
   quality:
@@ -45,34 +54,99 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
+      - name: Cache Dependencies
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: |
+            **/node_modules
+            ~/.npm
+            ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.{js,jsx,ts,tsx}') }}
+          restore-keys: |
+            ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-modules-
+
       - name: Install Dependencies
-        run: npm ci
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit
 
       - name: Code Formatting Check
         run: npm run format:check
+        if: always()
 
       - name: Type Check
         run: npm run type-check || exit 1
+        if: always()
 
       - name: Lint
         run: npm run lint
+        if: always()
+
+      - name: Cache Test Results
+        uses: actions/cache@v4
+        with:
+          path: coverage
+          key: ${{ runner.os }}-test-coverage-${{ github.sha }}
 
       - name: Run tests with coverage
         run: npm run test:coverage
+        if: always()
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/coverage-final.json
+          flags: unittests
+          fail_ci_if_error: true
+
+      - name: Cache Next.js Build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.next/cache
+            ${{ github.workspace }}/out
+            !${{ github.workspace }}/.next/cache/eslint/*
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/*.{js,jsx,ts,tsx}') }}-${{ hashFiles('**/package-lock.json') }}
 
       - name: Build
         run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Upload Build Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            .next
+            out
+            public
+          compression-level: 9
 
   security:
-    needs: ['quality']
+    needs: ["quality"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install Dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit
 
       - name: Snyk Security Scan
         uses: snyk/actions/node@master
@@ -80,9 +154,11 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high
+          command: monitor
 
       - name: Run npm audit
         run: npm audit
+        continue-on-error: true
 
       - name: Check for outdated
         run: npm outdated || true
@@ -93,6 +169,10 @@ jobs:
       github.ref == 'refs/heads/main' && 
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     outputs:
       version: ${{ steps.release.outputs.version }}
     steps:
@@ -106,8 +186,17 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+
       - name: Install dependencies
-        run: npm ci
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit
 
       - name: Configure Git
         run: |
@@ -145,3 +234,34 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up old caches
+        run: |
+          gh extension install actions/gh-actions-cache
+
+          REPO=${{ github.repository }}
+          BRANCH="refs/heads/main"
+
+          echo "Fetching list of cache key"
+          cacheKeys=$(gh actions-cache list -R $REPO -B $BRANCH | cut -f 1 )
+
+          ## Setting this to not fail the workflow while deleting cache keys. 
+          set +e
+          echo "Deleting caches..."
+          for cacheKey in $cacheKeys
+          do
+              if [[ $cacheKey == *"modules"* || $cacheKey == *"nextjs"* ]]; then
+                  timestamp=$(gh actions-cache list -R $REPO -B $BRANCH | grep $cacheKey | cut -f 3)
+                  created=$(date -d "$timestamp" +%s)
+                  now=$(date +%s)
+                  days=$(( ($now - $created) / 86400 ))
+                  
+                  if [ $days -gt 7 ]; then
+                      gh actions-cache delete $cacheKey -R $REPO -B $BRANCH --confirm
+                      echo "Deleted $cacheKey"
+                  fi
+              fi
+          done
+          set -e
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,11 +1,19 @@
 {
   "name": "tdd-exercise",
-  "version": "0.0.0-dev.1",
+  "version": "0.1.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "release": "release-it",
-    "release:dry": "release-it --dry-run"
+    "release:dry": "release-it --dry-run",
+    "format:check": "prettier . --check",
+    "type-check": "tsc --noEmit",
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "repository": {
     "type": "git",
@@ -20,7 +28,22 @@
   },
   "homepage": "https://github.com/IliaKamilov/TDD-exercise#readme",
   "description": "",
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "next": "15.1.7"
+  },
   "devDependencies": {
-    "release-it": "^18.1.2"
+    "prettier": "^3.5.2",
+    "release-it": "^18.1.2",
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.7",
+    "@eslint/eslintrc": "^3"
   }
 }
