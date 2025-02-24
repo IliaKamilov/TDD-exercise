@@ -9,6 +9,7 @@
     "release": "release-it --ci",
     "release:dry": "release-it --dry-run",
     "format:check": "prettier . --check",
+    "format:fix": "prettier . --write",
     "type-check": "tsc --noEmit",
     "dev": "next dev --turbopack",
     "build": "next build",
