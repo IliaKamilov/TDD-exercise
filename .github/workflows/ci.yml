@@ -69,6 +69,7 @@ jobs:
         run: npm run build
 
   security:
+    needs: ['quality']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
