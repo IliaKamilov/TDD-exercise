@@ -207,8 +207,7 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
       - name: Generate Release Notes
-        run: |
-          node scripts/generateReleaseNotes.js > RELEASE_NOTES.md
+        run: npm run release
 
       - name: Create Release
         id: release
