@@ -1,0 +1,30 @@
+{
+  "git": {
+    "requireBranch": "main",
+    "commitMessage": "chore: release v${version}",
+    "tagName": "v${version}",
+    "tagAnnotation": "Release v${version}",
+    "push": true
+  },
+  "github": {
+    "release": true,
+    "releaseName": "Release ${version}",
+    "releaseNotes": "npx auto-changelog --stdout --commit-limit false -u --template https://raw.githubusercontent.com/release-it/release-it/main/templates/changelog-compact.hbs"
+  },
+  "hooks": {
+    "before:init": ["npm run lint", "npm run test"],
+    "after:bump": ["npx auto-changelog -p"],
+    "after:release": "echo Successfully released ${name} v${version} to ${repo.repository}."
+  },
+  "npm": {
+    "publish": false
+  },
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": "angular",
+      "infile": "CHANGELOG.md",
+      "header": "# Changelog\n\nAll notable changes to this project will be documented in this file.\n",
+      "breakingHeaderPattern": "^BREAKING\\s+CHANGES?$"
+    }
+  }
+}
