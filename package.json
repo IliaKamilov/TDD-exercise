@@ -1,10 +1,10 @@
 {
   "name": "tdd-exercise",
-  "version": "0.1.5",
+  "version": "0.2.1",
   "scripts": {
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage --passWithNoTests",
+    "test:coverage": "jest --ci --coverage --passWithNoTests",
     "release": "release-it --ci",
     "release:dry": "release-it --dry-run",
     "format:check": "prettier . --check",
@@ -35,25 +35,36 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@commitlint/config-conventional": "^19.7.1",
     "@eslint/eslintrc": "^3",
     "@release-it/conventional-changelog": "^10.0.0",
-    "@types/node": "^20",
+    "@tailwindcss/postcss": "^4.0.8",
+    "@types/node": "^22.13.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.20",
+    "commitizen": "^4.3.1",
+    "commitlint": "^19.7.1",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^9",
     "eslint-config-next": "15.1.7",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.3",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
-    "postcss": "^8",
+    "postcss": "^8.5.3",
     "prettier": "^3.5.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "release-it": "^18.1.2",
-    "tailwindcss": "^3.4.1",
+    "tailwindcss": "^4.0.8",
     "typescript": "^5"
   },
   "lint-staged": {
     "*.js": "eslint --cache --fix"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
   }
 }

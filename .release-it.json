@@ -12,7 +12,7 @@
     "releaseNotes": "npx auto-changelog --stdout --commit-limit false -u --template https://raw.githubusercontent.com/release-it/release-it/main/templates/changelog-compact.hbs"
   },
   "hooks": {
-    "before:init": ["npm run lint", "npm run test"],
+    "before:init": ["npm test && npx tsc --noEmit", ""],
     "after:bump": ["npx auto-changelog -p"],
     "after:release": "echo Successfully released ${name} v${version} to ${repo.repository}."
   },
