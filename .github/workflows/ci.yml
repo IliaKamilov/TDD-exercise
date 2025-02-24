@@ -205,7 +205,7 @@ jobs:
 
       - name: Generate Release Notes
         run: |
-          npx ts-node scripts/generateReleaseNotes.ts > RELEASE_NOTES.md
+          npx ts-node scripts/generateReleaseNotes.js > RELEASE_NOTES.md
 
       - name: Create Release
         id: release
